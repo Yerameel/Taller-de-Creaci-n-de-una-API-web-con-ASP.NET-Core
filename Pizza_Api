@@ -1,0 +1,417 @@
+Program.cs
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorPages();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.MapRazorPages();
+
+app.Run();
+
+Pizza.cshtml.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace RazorPagesPizza.Pages
+{
+    public class PizzaModel : PageModel
+    public List<Pizza> pizzas;
+    public string GlutenFreeText(Pizza pizza)
+{
+    if (pizza.IsGlutenFree)
+        return "Gluten Free";
+    return "Not Gluten Free";
+}
+public IActionResult OnPost()
+{
+    if (!ModelState.IsValid)
+    {
+        return Page();
+    }
+    PizzaService.Add(NewPizza);
+    return RedirectToAction("Get");
+}
+[BindProperty]
+public Pizza NewPizza { get; set; }
+public IActionResult OnPostDelete(int id)
+{
+    PizzaService.Delete(id);
+    return RedirectToAction("Get");
+}
+    {
+public void OnGet()
+{
+    pizzas = PizzaService.GetAll();
+}
+    }
+}
+
+_ViewImports.cshtml
+
+@using RazorPagesPizza
+@namespace RazorPagesPizza.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+_ViewStart.cshtml
+
+@{
+    Layout = "_Layout";
+}
+
+
+
+
+Error.cshtml
+
+@page
+@model ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<h1 class="text-danger">Error.</h1>
+<h2 class="text-danger">An error occurred while processing your request.</h2>
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>Request ID:</strong> <code>@Model.RequestId</code>
+    </p>
+}
+
+
+<h3>Development Mode</h3>
+<p>
+    Swapping to the <strong>Development</strong> environment displays detailed information about the error that occurred.
+</p>
+<p>
+    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
+    It can result in displaying sensitive information from exceptions to end users.
+    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
+    and restarting the app.
+</p>
+
+Error.cshtml.cs
+
+using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace RazorPagesPizza.Pages;
+
+[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+[IgnoreAntiforgeryToken]
+public class ErrorModel : PageModel
+{
+    public string? RequestId { get; set; }
+
+    public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    private readonly ILogger<ErrorModel> _logger;
+
+    public ErrorModel(ILogger<ErrorModel> logger)
+    {
+        _logger = logger;
+    }
+
+    public void OnGet()
+    {
+        RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+    }
+}
+
+
+Index.cshtml
+
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+
+Index.cshtml.cs
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace RazorPagesPizza.Pages;
+
+public class IndexModel : PageModel
+{
+    private readonly ILogger<IndexModel> _logger;
+
+    public IndexModel(ILogger<IndexModel> logger)
+    {
+        _logger = logger;
+    }
+
+    public void OnGet()
+    {
+
+    }
+}
+
+Pizza.cshtml
+
+@page
+@using RazorPagesPizza.Models
+@model RazorPagesPizza.Pages.PizzaModel
+@{
+    ViewData["Title"] = "Pizza List";
+}
+
+<h1>Pizza List 🍕</h1>
+<form method="post" class="card p-3">
+    <div class="row">
+        <div asp-validation-summary="All"></div>
+    </div>
+    <div class="form-group mb-0 align-middle">
+        <label asp-for="NewPizza.Name">Name</label>
+        <input type="text" asp-for="NewPizza.Name" class="mr-5">
+        <label asp-for="NewPizza.Size">Size</label>
+        <select asp-for="NewPizza.Size" asp-items="Html.GetEnumSelectList<PizzaSize>()" class="mr-5"></select>
+        <label asp-for="NewPizza.Price"></label>
+        <input asp-for="NewPizza.Price" class="mr-5" />
+        <label asp-for="NewPizza.IsGlutenFree">Gluten Free</label>
+        <input type="checkbox" asp-for="NewPizza.IsGlutenFree" class="mr-5">
+        <button class="btn btn-primary">Add</button>
+    </div>
+</form>
+<table class="table mt-5">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Price</th>
+            <th scope="col">Size</th>
+            <th scope="col">Gluten Free</th>
+            <th scope="col">Delete</th>
+        </tr>
+    </thead>
+    @foreach (var pizza in Model.pizzas)
+    {
+        <tr>
+            <td>@pizza.Name</td>
+            <td>@($"{pizza.Price:C}")</td>
+            <td>@pizza.Size</td>
+            <td>@Model.GlutenFreeText(pizza)</td>
+            <td>
+                <form method="post" asp-page-handler="Delete" asp-route-id="@pizza.Id">
+                    <button class="btn btn-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+</table>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+}
+
+Pizza.cshtml.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace RazorPagesPizza.Pages
+{
+    public class PizzaModel : PageModel
+    public List<Pizza> pizzas;
+    public string GlutenFreeText(Pizza pizza)
+{
+    if (pizza.IsGlutenFree)
+        return "Gluten Free";
+    return "Not Gluten Free";
+}
+public IActionResult OnPost()
+{
+    if (!ModelState.IsValid)
+    {
+        return Page();
+    }
+    PizzaService.Add(NewPizza);
+    return RedirectToAction("Get");
+}
+[BindProperty]
+public Pizza NewPizza { get; set; }
+public IActionResult OnPostDelete(int id)
+{
+    PizzaService.Delete(id);
+    return RedirectToAction("Get");
+}
+    {
+public void OnGet()
+{
+    pizzas = PizzaService.GetAll();
+}
+    }
+}
+
+
+
+
+Privacy.cshtml
+
+@page
+@model PrivacyModel
+@{
+    ViewData["Title"] = "Privacy Policy";
+}
+<h1>@ViewData["Title"]</h1>
+
+<p>Use this page to detail your site's privacy policy.</p>
+
+Privacy.cshtml.cs
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace RazorPagesPizza.Pages;
+
+public class PrivacyModel : PageModel
+{
+    private readonly ILogger<PrivacyModel> _logger;
+
+    public PrivacyModel(ILogger<PrivacyModel> logger)
+    {
+        _logger = logger;
+    }
+
+    public void OnGet()
+    {
+    }
+}
+
+launchSettings.json
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:38807",
+      "sslPort": 44324
+    }
+  },
+  "profiles": {
+    "RazorPagesPizza": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "https://localhost:7058;http://localhost:5035",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+
+PizzaService.cs
+
+using RazorPagesPizza.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace RazorPagesPizza.Services
+{
+    public static class PizzaService
+    {
+        static List<Pizza> Pizzas { get; }
+        static int nextId = 3;
+        static PizzaService()
+        {
+            Pizzas = new List<Pizza>
+            {
+                new Pizza { Id = 1, Name = "Classic Italian", Price=20.00M, Size=PizzaSize.Large, IsGlutenFree = false },
+                new Pizza { Id = 2, Name = "Veggie", Price=15.00M, Size=PizzaSize.Small, IsGlutenFree = true }
+            };
+        }
+
+        public static List<Pizza> GetAll() => Pizzas;
+
+        public static Pizza Get(int id) => Pizzas.FirstOrDefault(p => p.Id == id);
+
+        public static void Add(Pizza pizza)
+        {
+            pizza.Id = nextId++;
+            Pizzas.Add(pizza);
+        }
+
+        public static void Delete(int id)
+        {
+            var pizza = Get(id);
+            if (pizza is null)
+                return;
+
+            Pizzas.Remove(pizza);
+        }
+
+        public static void Update(Pizza pizza)
+        {
+            var index = Pizzas.FindIndex(p => p.Id == pizza.Id);
+            if (index == -1)
+                return;
+
+            Pizzas[index] = pizza;
+
+        }
+    }
+}
+site.css
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
